@@ -1,6 +1,7 @@
 use crate::retryable::Retryable;
 use http::StatusCode;
 use reqwest_middleware::Error;
+use tracing::info;
 
 /// A strategy to create a [`Retryable`] from a [`Result<reqwest::Response, reqwest_middleware::Error>`]
 ///
@@ -58,7 +59,7 @@ use reqwest_middleware::Error;
 ///     // Exponential backoff with max 2 retries
 ///     let retry_policy = ExponentialBackoff::builder()
 ///         .build_with_max_retries(2);
-///     
+///
 ///     // Create the actual middleware, with the exponential backoff and custom retry stategy.
 ///     let ret_s = RetryTransientMiddleware::new_with_policy_and_strategy(
 ///         retry_policy,
@@ -73,14 +74,14 @@ use reqwest_middleware::Error;
 ///         .build();
 ///
 ///     // Send request which should get a 201 response. So it will be retried
-///     let r = client   
+///     let r = client
 ///         .get("https://httpbin.org/status/201")
 ///         .send()
 ///         .await;
 ///     println!("{:?}", r);
 ///
 ///     // Send request which should get a 200 response. So it will not be retried
-///     let r = client   
+///     let r = client
 ///         .get("https://httpbin.org/status/200")
 ///         .send()
 ///         .await;
@@ -96,6 +97,7 @@ pub struct DefaultRetryableStrategy;
 
 impl RetryableStrategy for DefaultRetryableStrategy {
     fn handle(&self, res: &Result<reqwest::Response, Error>) -> Option<Retryable> {
+        info!("Retry cause {:?}", res);
         match res {
             Ok(success) => default_on_request_success(success),
             Err(error) => default_on_request_failure(error),
